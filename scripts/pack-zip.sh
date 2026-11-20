@@ -62,7 +62,6 @@ else
 fi
 
 cd ak3_tmp
-bash "${GITHUB_WORKSPACE}/scripts/signing/ci-sign.sh" "$PWD"
 zip -r9 "../${ZIP_NAME}" * -x .git/*
 cd ..
 rm -rf ak3_tmp

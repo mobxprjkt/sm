@@ -10,7 +10,6 @@ on:
       artifact_name: { type: string, required: true }
       defconfig:     { type: string, required: true }
       build_type:    { type: string, required: true }   # stable | testing
-      notify:        { type: boolean, default: true }
       use_ccache:    { type: boolean, default: false }
       ksun_tag_pin:  { type: string, required: false, default: "" }  # verify-gate only
       sksu_tag_pin:  { type: string, required: false, default: "" }  # verify-gate only
@@ -172,57 +171,13 @@ jobs:
           bash scripts/verify-kernel.sh
 
 
-      - name: "Notify variant failure"
-        if: failure()
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_TOPIC_ID:  ${{ secrets.TELEGRAM_TOPIC_ID }}
-          VARIANT:     ${{ inputs.variant_name }}
-          SOURCE_TYPE: ${{ inputs.source_type }}
-          BUILD_TYPE:  ${{ inputs.build_type }}
-          RUN_URL:     "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RUN_NUMBER:  ${{ github.run_number }}
-          NOTIFY_ENABLED: ${{ inputs.notify }}
-        run: bash scripts/notify.sh variant-failure
-
-      - name: "Install aarch64 cross compiler (zip signing)"
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq gcc-aarch64-linux-gnu libc6-dev-arm64-cross
-
       - name: "Pack ZIP"
         env:
           ZIP_PREFIX:  ${{ inputs.zip_prefix }}
           KSU_TYPE:    ${{ inputs.ksu_type }}
           BUILD_TYPE:  ${{ inputs.build_type }}
           SOURCE_TYPE: ${{ inputs.source_type }}
-          SEIRAN_SIGN_KEY: ${{ secrets.SEIRAN_SIGN_KEY }}
         run: bash scripts/pack-zip.sh
-
-      - name: "Setup JDK 21 (Seiran app)"
-        if: endsWith(inputs.artifact_name, '-ksun')
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: "Build Seiran app"
-        if: endsWith(inputs.artifact_name, '-ksun')
-        env:
-          SEIRAN_APP_KS_B64: ${{ secrets.SEIRAN_APP_KS_B64 }}
-          SEIRAN_APP_KS_PASS: ${{ secrets.SEIRAN_APP_KS_PASS }}
-          SEIRAN_APP_APK: ${{ runner.temp }}/seiran-app.apk
-        run: bash scripts/build-app.sh "$SEIRAN_APP_APK"
-
-      - name: "Pack Seiran Core module"
-        if: endsWith(inputs.artifact_name, '-ksun')
-        env:
-          SOURCE_TYPE: ${{ inputs.artifact_name }}
-          COMMIT_SHA:  ${{ github.sha }}
-          BUILD_NUM:   ${{ github.run_number }}
-          SEIRAN_SIGN_KEY: ${{ secrets.SEIRAN_SIGN_KEY }}
-          SEIRAN_APP_APK: ${{ runner.temp }}/seiran-app.apk
-        run: |
-          bash scripts/pack-module.sh
 
       - name: "Capture uname"
         run: |
@@ -241,8 +196,6 @@ jobs:
           mkdir -p "$STAGE"
           [ -f "${{ env.WORK_DIR }}/${{ env.ZIP_NAME }}" ] && \
             cp "${{ env.WORK_DIR }}/${{ env.ZIP_NAME }}" "$STAGE/"
-          [ -f "${{ env.WORK_DIR }}/out/seiran-core.zip" ] && \
-            cp "${{ env.WORK_DIR }}/out/seiran-core.zip" "$STAGE/"
           [ -f "${{ env.KERNEL_SRC }}/out/dist/kernel_version.txt" ] && \
             cp "${{ env.KERNEL_SRC }}/out/dist/kernel_version.txt" "$STAGE/"
           [ -f "${{ env.KERNEL_SRC }}/out/dist/kernel_uname.txt" ] && \

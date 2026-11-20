@@ -11,10 +11,6 @@ on:
         type: choice
         options: [stable, testing]
         default: testing
-      notify:
-        description: "Send Telegram notifications"
-        type: boolean
-        default: false
       nuke_release:
         description: "Nuke ALL existing assets on this release before uploading (opt-in)"
         type: boolean
@@ -76,7 +72,6 @@ jobs:
       artifact_name: ${{ matrix.variant.artifact }}
       defconfig:     ${{ matrix.variant.defconfig }}
       build_type:    ${{ inputs.build_type || 'stable' }}
-      notify:        ${{ inputs.notify == true }}
       use_ccache:    ${{ inputs.use_ccache == true }}
     secrets: inherit
 
@@ -91,25 +86,6 @@ jobs:
       start_time: ${{ needs.setup.outputs.start_time }}
       workflow_type: legacy
       nuke_release: ${{ inputs.nuke_release }}
-      notify: ${{ inputs.notify == true }}
       use_ccache: ${{ inputs.use_ccache == true }}
     secrets: inherit
 
-  notify-failure:
-    name: "Notify Failure"
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: always() && needs.build.result == 'cancelled' && inputs.notify == true
-    steps:
-      - uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 1
-      - name: "Telegram"
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_TOPIC_ID:  ${{ secrets.TELEGRAM_TOPIC_ID }}
-          RUN_URL:    "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          RUN_NUMBER: "${{ github.run_number }}"
-          BUILD_STATUS: "${{ needs.build.result }}"
-        run: bash scripts/notify.sh failure

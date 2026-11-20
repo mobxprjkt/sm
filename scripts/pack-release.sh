@@ -45,7 +45,6 @@ if [ "$ZIP_MODE" = "aio" ] || [ "$ZIP_MODE" = "both" ]; then
   ls -lh ak3_aio/Image.gki.* 2>/dev/null || { echo "[ERROR] No named images found"; exit 1; }
 
   cd ak3_aio
-  bash "${GITHUB_WORKSPACE}/scripts/signing/ci-sign.sh" "$PWD"
   zip -r9 "../release_zips/${AIO_NAME}" * -x .git/*
   cd ..
   rm -rf ak3_aio
@@ -59,8 +58,5 @@ if [ "$ZIP_MODE" = "per-variant" ] || [ "$ZIP_MODE" = "both" ]; then
   echo "Collected per-variant ZIPs:"
 fi
 
-# Attach zram module zip(s) to the release as-is, independent of ZIP_MODE —
-# it's a standalone Magisk/KSU module, not part of the kernel Image bundle.
-find ./artifacts -name "seiran-core.zip" -exec cp {} ./release_zips/ \;
 
 ls -lh ./release_zips/
